@@ -7,21 +7,32 @@ using Bitboard = uint64_t;
 using Move = uint32_t;
 
 // Compile time counts
-constexpr int kColorCount = 2;
+constexpr int kSideCount = 2;
+constexpr int kOccupancyCount = 3;
 constexpr int kPieceTypeCount = 6;
 constexpr int kSquareCount = 64;
 
 enum Color { White, Black, Both};
+// PieceType index convention:
+// Pawn=0, Knight=1, Bishop=2, Rook=3, Queen=4, King=5
 enum PieceType { Pawn, Knight, Bishop, Rook, Queen, King};
 // Piece index map:
-// 0-5  -> WhitePawn..WhiteKing
-// 6-11 -> BlackPawn..BlackKing
+// 0-5  -> White Pieces
+// 6-11 -> Black Pieces
 // 12   -> NoPiece
 enum Piece { 
     WhitePawn, WhiteKnight, WhiteBishop, WhiteRook, WhiteQueen, WhiteKing,
     BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing,
     NoPiece
 };
+
+inline Color colorOf(Piece piece) {
+    return (piece <= WhiteKing) ? White : Black;
+}
+
+inline PieceType typeOf(Piece piece) {
+    return static_cast<PieceType>(piece % kPieceTypeCount);
+}
 // Canonical square-to-index mapping convention (A1 = 0, H8 = 63).
 enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1, 
@@ -42,10 +53,10 @@ enum CastlingRights {
 };
 struct Board {
     // Board fields
-    Bitboard pieces[kColorCount][kPieceTypeCount]; 
-    Bitboard occupancy[3]; 
+    Bitboard pieces[kSideCount][kPieceTypeCount]; 
+    Bitboard occupancy[kOccupancyCount]; 
     Piece pieceOn[kSquareCount]; 
-    Square kingSquare[kColorCount]; 
+    Square kingSquare[kSideCount]; 
 
     // Game-state fields (cannot be derived from pieces on the board alone)
     Color sideToMove; 
@@ -58,7 +69,7 @@ struct Board {
     void clearBoard();
     void updateOccupancy();
     void setPiece(Square sq, Piece piece);
-    void removePiece(Square sq, Piece piece);
+    void removePiece(Square sq);
     void movePiece(Square from, Square to);
     bool isSquareOccupied(Square sq) const;
     Piece pieceAt(Square sq) const;

@@ -1,12 +1,13 @@
 #include "board.h"
 #include <algorithm>
+#include <cassert>
 
 void Board::clearBoard() {
     // Board fields
-    std::fill(&pieces[0][0], &pieces[0][0] + (kColorCount * kPieceTypeCount), 0ULL);
-    std::fill(&occupancy[0], &occupancy[0] + 3, 0ULL);
+    std::fill(&pieces[0][0], &pieces[0][0] + (kSideCount * kPieceTypeCount), 0ULL);
+    std::fill(&occupancy[0], &occupancy[0] + kOccupancyCount, 0ULL);
     std::fill(pieceOn, pieceOn + kSquareCount, NoPiece);
-    std::fill(kingSquare, kingSquare + kColorCount, NoSquare);
+    std::fill(kingSquare, kingSquare + kSideCount, NoSquare);
 
     // Game-state fields
     sideToMove = White; 
@@ -29,4 +30,70 @@ void Board::updateOccupancy() {
     }
 
     occupancy[Both] = occupancy[White] | occupancy[Black];
+}
+void Board::setPiece(Square sq, Piece piece) {
+    // Piece being put must be non-null. Target square must be null
+    if (sq == NoSquare || piece == NoPiece) return;
+    assert(pieceOn[sq] == NoPiece);
+
+    pieceOn[sq] = piece;
+    
+    // Extracting information from sq and piece
+    const Bitboard mask = 1ULL << sq;
+    const Color color = colorOf(piece);
+    const PieceType pieceType = typeOf(piece);
+
+    // Setting the piece
+    pieces[color][pieceType] |= mask;
+    occupancy[color] |= mask;
+    occupancy[Both] |= mask;
+    if (pieceType == King) {
+        kingSquare[color] = sq;
+    }
+}
+
+void Board::removePiece(Square sq) {
+    if (sq == NoSquare) return;
+
+    const Piece piece = pieceOn[sq];
+    if (piece == NoPiece) return;
+
+    const Bitboard mask = 1ULL << sq;
+    const Color color = colorOf(piece);
+    const PieceType pieceType = typeOf(piece);
+
+    // Clear the square in piecesOn and related bitboards
+    pieces[color][pieceType] &= ~mask;
+    occupancy[color] &= ~mask;
+    occupancy[Both] &= ~mask;
+    pieceOn[sq] = NoPiece;
+
+    if (pieceType == King) {
+        kingSquare[color] = NoSquare;
+    }
+}
+
+void Board::movePiece(Square from, Square to) {
+    assert(from != NoSquare && to != NoSquare);
+    assert(from != to);
+
+    const Piece moving = pieceOn[from];
+    assert(moving != NoPiece);
+    if (moving == NoPiece) return;
+
+    // Capture
+    if (pieceOn[to] != NoPiece) {
+        removePiece(to);
+    }
+    
+    removePiece(from);
+    setPiece(to, moving);
+}
+bool Board::isSquareOccupied(Square sq) const {
+    assert(sq != NoSquare);
+    return pieceOn[sq] != NoPiece;
+}
+Piece Board::pieceAt(Square sq) const {
+    assert(sq != NoSquare);
+    return pieceOn[sq];
 }
